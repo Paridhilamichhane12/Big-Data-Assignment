@@ -76,3 +76,88 @@ if peak_filter == "Peak Only" and "is_peak_hour" in df.columns:
     filtered_df = filtered_df[filtered_df["is_peak_hour"] == 1]
 elif peak_filter == "Off-Peak Only" and "is_peak_hour" in df.columns:
     filtered_df = filtered_df[filtered_df["is_peak_hour"] == 0]
+
+# ------------------------------------------------------------------
+# Top-level KPIs
+# ------------------------------------------------------------------
+col1, col2, col3, col4 = st.columns(4)
+
+total_trips = len(filtered_df)
+delay_col = "is_delayed" if "is_delayed" in filtered_df.columns else None
+
+with col1:
+    st.metric("Total Trips", f"{total_trips:,}")
+
+if delay_col:
+    on_time_rate = 1 - filtered_df[delay_col].mean() if total_trips > 0 else 0
+    with col2:
+        st.metric("On-Time Rate", f"{on_time_rate:.1%}", delta=f"{on_time_rate - 0.85:.1%} vs 85% target")
+    with col3:
+        st.metric("Delayed Trips", f"{int(filtered_df[delay_col].sum()):,}")
+    with col4:
+        st.metric("Operators Shown", f"{len(selected_operators)}")
+else:
+    st.info("No 'is_delayed' column found — delay-based KPIs are unavailable for this dataset.")
+
+st.divider()
+
+
+
+st.subheader(f"Delay Rate by {operator_col.replace('_', ' ').title()}")
+
+if delay_col and total_trips > 0:
+    op_agg = (
+        filtered_df.groupby(operator_col)[delay_col]
+        .agg(["mean", "count"])
+        .rename(columns={"mean": "delay_rate", "count": "trips"})
+        .query("trips >= 20")
+        .sort_values("delay_rate", ascending=False)
+    )
+
+    if op_agg.empty:
+        st.info("No operator has at least 20 trips in the current filter selection.")
+    else:
+        fig, ax = plt.subplots(figsize=(10, 5))
+        sns.barplot(x=op_agg["delay_rate"], y=op_agg.index, palette="viridis", ax=ax)
+        ax.set_xlabel("Delay Rate")
+        ax.set_ylabel(operator_col.replace("_", " ").title())
+        st.pyplot(fig)
+
+        st.dataframe(op_agg.style.format({"delay_rate": "{:.1%}"}))
+elif not delay_col:
+    st.info("Delay rate chart unavailable — no 'is_delayed' column in the data.")
+
+
+hour_col = "hour_of_day" if "hour_of_day" in filtered_df.columns else (
+    "arrival_hour" if "arrival_hour" in filtered_df.columns else None
+)
+
+if hour_col and delay_col and total_trips > 0:
+    st.subheader("Delay Rate by Hour of Day")
+    hourly = filtered_df.groupby(hour_col)[delay_col].mean()
+
+    fig2, ax2 = plt.subplots(figsize=(10, 4))
+    sns.lineplot(x=hourly.index, y=hourly.values, marker="o", ax=ax2)
+    ax2.set_xlabel("Hour")
+    ax2.set_ylabel("Delay Rate")
+    ax2.set_xticks(range(0, 24))
+    st.pyplot(fig2)
+
+st.divider()
+
+st.subheader(f"Explore Trips by {operator_col.replace('_', ' ').title()}")
+
+if operators:
+    lookup_operator = st.selectbox("Choose a value to inspect", operators)
+    if lookup_operator:
+        result = query_by_operator(lookup_operator, operator_col)
+        st.write(f"Showing {len(result):,} trips for **{lookup_operator}**")
+        st.dataframe(result.head(100))
+else:
+    st.info("No values available to explore.")
+
+st.divider()
+st.caption(
+    "Data source: BODS GTFS (Yorkshire) via MySQL. "
+    "All queries use parameterised SQL (no string concatenation)."
+)
