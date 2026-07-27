@@ -26,7 +26,7 @@ def get_engine():
 
 
 def create_database_if_not_exists():
-    
+    """MySQL needs the database to exist before you can connect to it directly."""
     root_conn_string = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/"
     engine = create_engine(root_conn_string)
     with engine.connect() as conn:
