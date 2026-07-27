@@ -71,10 +71,7 @@ def export_to_mysql(df, table_name="trips", sample_fraction=None):
 
 
 def query_trips_by_operator(operator_name, table_name="trips", limit=5, operator_col="agency_name"):
-   
     engine = get_engine()
     query = f"SELECT * FROM {table_name} WHERE {operator_col} = %s LIMIT %s;"
     result = pd.read_sql_query(query, engine, params=(operator_name, limit))
     return result
-
-
