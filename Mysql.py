@@ -12,6 +12,11 @@ DB_USER = os.environ.get("DB_USER", "root")
 DB_PASSWORD = os.environ.get("DB_PASSWORD", "")
 DB_NAME = os.environ.get("DB_NAME", "bus_reliability")
 
+if not DB_PASSWORD:
+    raise ValueError(
+        "DB_PASSWORD environment variable not set. Set it in your shell before "
+        "starting Jupyter/Streamlit, e.g.: export DB_PASSWORD='your_password_here'"
+    )
 
 CONN_STRING = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
