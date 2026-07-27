@@ -36,13 +36,22 @@ def create_database_if_not_exists():
 
 
 def export_to_mysql(df, table_name="trips", sample_fraction=None):
-    
     print(f"\nExporting to MySQL table: {table_name}")
 
-    
+    # This check is now enforced, not just computed and discarded.
+    # agency_name must exist for the dashboard's operator-level analysis
+    # (dashboard.py) to work correctly — otherwise it silently falls back
+    # to grouping by route_short_name instead of operator, conflating
+    # routes with operators.
     expected_cols = ["agency_name"]
     missing = [c for c in expected_cols if c not in df.columns]
-    
+    if missing:
+        raise ValueError(
+            f"export_to_mysql: DataFrame is missing expected column(s) {missing}. "
+            f"The dashboard's operator-level analysis depends on 'agency_name' being "
+            f"present — check that engineer_features() joins the agency table "
+            f"(gtfs_clean['agency']) before calling this function."
+        )
 
     create_database_if_not_exists()
     engine = get_engine()
