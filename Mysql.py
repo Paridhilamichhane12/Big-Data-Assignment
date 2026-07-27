@@ -1,5 +1,5 @@
 # ========================
-# 2b. DATA STORAGE 
+# 2b. DATA STORAGE
 # ========================
 import os
 import pandas as pd
